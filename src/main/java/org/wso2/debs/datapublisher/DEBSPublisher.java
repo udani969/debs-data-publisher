@@ -1,7 +1,6 @@
 package org.wso2.debs.datapublisher;
 
 
-import com.google.gson.Gson;
 import org.wso2.carbon.databridge.agent.thrift.Agent;
 import org.wso2.carbon.databridge.agent.thrift.DataPublisher;
 import org.wso2.carbon.databridge.agent.thrift.conf.AgentConfiguration;
@@ -9,7 +8,11 @@ import org.wso2.carbon.databridge.agent.thrift.exception.AgentException;
 import org.wso2.carbon.databridge.commons.Event;
 import org.wso2.carbon.databridge.commons.exception.NoStreamDefinitionExistException;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -21,7 +24,7 @@ public class DEBSPublisher {
     public static final String DEBS_DATA_STREAM = "debs_data";
     public static final String VERSION = "1.0.0";
 
-    private static int count = 1000;
+    private static int count = 50;
 
     /**
      * id – a unique identifier of the measurement [64 bit unsigned integer value]
@@ -40,12 +43,6 @@ public class DEBSPublisher {
         String file = args[3];
         count = Integer.parseInt(args[4]);
 
-//        String server = "localhost:7611";
-//        String username = "admin";
-//        String password = "admin";
-//        String file = "/data/packs/test/debs/sorted400M.txt";
-        count = 10;
-
         String streamId;
 
         System.out.println("Initialized DEBS data publisher on " + server + " with " + count + " records to write");
@@ -61,20 +58,22 @@ public class DEBSPublisher {
         DataPublisher dataPublisher = new DataPublisher("tcp://" + server, username, password, agent);
 
         String definition = "{" +
-                "  'name':'" + DEBS_DATA_STREAM + "'," +
-                "  'version':'" + VERSION + "'," +
-                "  'nickName': 'DEBSStream'," +
-                "  'description': 'DEBS data'," +
-                "  'metaData':[" +
-                "          {'name':'publisher','type':'STRING'}" +
-                "  ]," +
-                "  'payloadData':[" +
-                "          {'name':'id','type':'STRING'}," +
-                "          {'name':'value','type':'FLOAT'}," +
-                "          {'name':'property','type':'INT'}," +
-                "          {'name':'composite_plug_id','type':'STRING'}" +
-                "  ]" +
-                "}";
+                            "  'name':'" + DEBS_DATA_STREAM + "'," +
+                            "  'version':'" + VERSION + "'," +
+                            "  'nickName': 'DEBSStream'," +
+                            "  'description': 'DEBS data'," +
+                            "  'metaData':[" +
+                            "          {'name':'publisher','type':'STRING'}" +
+                            "  ]," +
+                            "  'payloadData':[" +
+                            "          {'name':'id','type':'STRING'}," +
+                            "          {'name':'value','type':'FLOAT'}," +
+                            "          {'name':'property','type':'BOOL'}," +
+                            "          {'name':'plug_id','type':'INT'}," +
+                            "          {'name':'household_id','type':'INT'}," +
+                            "          {'name':'house_id','type':'INT'}" +
+                            "  ]" +
+                            "}";
 
         try {
             streamId = dataPublisher.findStream(DEBS_DATA_STREAM, VERSION);
@@ -94,13 +93,14 @@ public class DEBSPublisher {
         dataPublisher.stop();
     }
 
-    private static void publishEvents(DataPublisher dataPublisher, String streamId, String file) throws FileNotFoundException {
+    private static void publishEvents(DataPublisher dataPublisher, String streamId, String file)
+            throws FileNotFoundException {
 
         BufferedReader br;
         FileReader fr;
         String host;
 
-        Gson gson = new Gson();
+//        Gson gson = new Gson();
         if (new File(file).exists()) {
             try {
                 if (getLocalAddress() != null) {
@@ -116,8 +116,8 @@ public class DEBSPublisher {
                 while ((line = br.readLine()) != null) {
                     String[] data = line.split(",");
                     Object[] payload = new Object[]{
-                            data[0], Float.parseFloat(data[2]), Integer.parseInt(data[3]),
-                            gson.toJson(new String[]{data[4], data[5], data[6]})
+                            data[0], Float.parseFloat(data[2]), Boolean.parseBoolean(data[3]),
+                            Integer.parseInt(data[4]), Integer.parseInt(data[5]), Integer.parseInt(data[6])
                     };
 
 
